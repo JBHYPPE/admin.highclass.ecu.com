@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>| HIGH CLASS ® | Admin Final</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏪</text></svg>">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0f1113;
+            --sidebar-black: #000000;
+            --accent: #ffffff;
+            --text-dim: #a1a1a1;
+            --danger: #ff4d4d;
+            --info: #80caff;
+            --success: #4ade80;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg-dark); color: white; display: flex; height: 100vh; overflow: hidden; }
+
+        /* NOTIFICACIONES */
+        #toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; }
+        .toast { 
+            background: #1a1a1a; border: 1px solid rgba(255,255,255,0.1); color: white; 
+            padding: 12px 20px; border-radius: 8px; font-size: 13px; font-weight: 600; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); animation: slideIn 0.3s ease-out forwards;
+        }
+        @keyframes slideIn { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        /* LOGIN */
+        #login-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.98); backdrop-filter: blur(20px); z-index: 1000; display: flex; align-items: center; justify-content: center; }
+        .login-box { text-align: center; width: 350px; padding: 20px; }
+        .brand-logo-big { font-size: 50px; font-weight: 900; letter-spacing: -2px; margin-bottom: 20px; text-shadow: 3px 3px 0px #333; }
+        .login-box input { width: 100%; padding: 15px; margin-bottom: 10px; border-radius: 10px; border:none; outline:none; font-weight: 600; }
+        .login-box button { width: 100%; padding: 15px; background: #222; color: white; border-radius: 10px; cursor: pointer; font-weight: 800; border: 1px solid #444; }
+
+        /* SIDEBAR */
+        .sidebar { width: 280px; background: var(--sidebar-black); display: flex; flex-direction: column; padding: 40px 15px; border-right: 1px solid #111; visibility: hidden; }
+        .sidebar.active { visibility: visible; }
+        .nav-item { padding: 14px 18px; border-radius: 10px; cursor: pointer; color: var(--text-dim); font-size: 14px; font-weight: 700; margin-bottom: 5px; display: flex; align-items: center; gap: 10px; }
+        .nav-item.active { background: white; color: black; }
+
+        /* CONTENIDO */
+        .main-content { flex-grow: 1; padding: 40px; overflow-y: auto; display: none; }
+        .main-content.visible { display: block; }
+        .view-section { display: none; }
+        .view-section.active { display: block; }
+        .card { background: #16181b; border-radius: 20px; padding: 30px; border: 1px solid #222; margin-bottom: 20px; }
+
+        /* BOTONES Y TABLAS */
+        .header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .btn-export { background: var(--success); color: black; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 12px; }
+        .btn-publish { background: white; color: black; border: none; padding: 16px; border-radius: 10px; width: 100%; cursor: pointer; font-weight: 800; margin-top: 20px; }
+        .btn-logout { margin-top: auto; background: none; border: 1px solid #333; color: var(--danger); padding: 12px; border-radius: 10px; cursor: pointer; }
+        
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; font-size: 11px; color: #555; padding-bottom: 15px; text-transform: uppercase; }
+        td { padding: 12px 0; border-bottom: 1px solid #1a1a1a; font-size: 14px; }
+        input, select { padding: 12px; background: #1c1f23; border: 1px solid #333; border-radius: 8px; width: 100%; color: white; outline: none; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .full { grid-column: span 2; }
+    </style>
+</head>
+<body>
+
+    <div id="toast-container"></div>
+
+    <div id="login-overlay">
+        <div class="login-box">
+            <div class="brand-logo-big">HIGH CLASS</div>
+            <input type="email" id="admin-email" placeholder="Email">
+            <input type="password" id="admin-pass" placeholder="Password">
+            <button onclick="handleLogin()">ENTRAR</button>
+        </div>
+    </div>
+
+    <aside class="sidebar" id="sidebar">
+        <div style="text-align: center; margin-bottom: 40px;">
+            <div style="font-size: 24px; font-weight: 900;">HIGH CLASS</div>
+            <div style="font-size: 9px; color: #666;">ADMIN PANEL</div>
+        </div>
+        <div class="nav-menu">
+            <div class="nav-item active" id="nav-add" onclick="switchView('add-view', this)"> Nuevo Producto</div>
+            <div class="nav-item" id="nav-inv" onclick="switchView('inv-view', this)"> Inventario</div>
+            <div class="nav-item" id="nav-orders" onclick="switchView('orders-view', this)"> Pedidos</div>
+        </div>
+        <button class="btn-logout" onclick="handleLogout()">Cerrar Sesión</button>
+    </aside>
+
+    <main class="main-content" id="content">
+        <section id="add-view" class="view-section active">
+            <h2 id="form-title" style="margin-bottom:20px;">Nuevo Artículo</h2>
+            <div class="card">
+                <input type="hidden" id="p-id">
+                <div class="form-grid">
+                    <div class="full"><label>Nombre</label><input type="text" id="p-name"></div>
+                    <div><label>Precio ($)</label><input type="number" id="p-price"></div>
+                    <div><label>Stock</label><input type="number" id="p-stock" value="1"></div>
+                    <div class="full">
+                        <label>Categoría</label>
+                        <select id="p-category">
+                            <option value="Essentials">Essentials</option>
+                            <option value="New Drop">New Drop</option>
+                            <option value="Limited Edition">Limited Edition</option>
+                        </select>
+                    </div>
+                    <div class="full"><label>Imagen</label><input type="file" id="p-img" accept="image/*"></div>
+                </div>
+                <button class="btn-publish" id="publish-btn" onclick="handlePublish()">Sincronizar Producto</button>
+                <button id="cancel-edit" style="display:none; width:100%; margin-top:10px; background:none; border:none; color:gray; cursor:pointer;" onclick="resetForm()">Cancelar edición</button>
+            </div>
+        </section>
+
+        <section id="inv-view" class="view-section">
+            <h2 style="margin-bottom:20px;">Inventario Actual</h2>
+            <div class="card" id="product-list">Cargando...</div>
+        </section>
+
+        <section id="orders-view" class="view-section">
+            <div class="header-flex">
+                <h2>Ventas Realizadas</h2>
+                <button class="btn-export" onclick="exportToExcel()">↓ EXPORTAR EXCEL</button>
+            </div>
+            <div class="card" id="orders-list">No hay pedidos.</div>
+        </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const S_URL = "https://uqyqljvwwbkopbvtlixb.supabase.co", 
+              S_KEY = "sb_publishable_NaAdbhfgM7p5YlyMFeXUVg_mV3CDwkb";
+        const sb = supabase.createClient(S_URL, S_KEY);
+
+        async function checkAuth() {
+            const { data: { session } } = await sb.auth.getSession();
+            if (session) showUI();
+        }
+        checkAuth();
+
+        async function handleLogin() {
+            const email = document.getElementById('admin-email').value;
+            const password = document.getElementById('admin-pass').value;
+            const { error } = await sb.auth.signInWithPassword({ email, password });
+            if (error) showMessage("❌ " + error.message); else showUI();
+        }
+
+        async function handleLogout() { await sb.auth.signOut(); location.reload(); }
+
+        function showUI() {
+            document.getElementById('login-overlay').style.display = "none";
+            document.getElementById('sidebar').classList.add('active');
+            document.getElementById('content').classList.add('visible');
+            loadInventory();
+        }
+
+        async function loadInventory() {
+            const { data, error } = await sb.from('productos').select('*').order('id', { ascending: false });
+            if(error) return;
+            let html = `<table><thead><tr><th>IMG</th><th>Modelo</th><th>Precio</th><th>Acciones</th></tr></thead><tbody>`;
+            data.forEach(p => {
+                html += `<tr>
+                    <td><img src="${p.img}" width="40" height="40" style="object-fit:cover; border-radius:5px;"></td>
+                    <td style="font-weight:700;">${p.name}</td>
+                    <td>$${p.price}</td>
+                    <td>
+                        <button style="color:var(--info); background:none; border:none; cursor:pointer; font-weight:700; margin-right:10px;" onclick="prepareEdit('${p.id}','${p.name}','${p.price}','${p.category}','${p.stock}')">EDITAR</button>
+                        <button style="color:var(--danger); background:none; border:none; cursor:pointer; font-weight:700;" onclick="deleteProduct('${p.id}')">BORRAR</button>
+                    </td>
+                </tr>`;
+            });
+            document.getElementById('product-list').innerHTML = html + `</tbody></table>`;
+        }
+
+        window.handlePublish = async () => {
+            const id = document.getElementById('p-id').value;
+            const name = document.getElementById('p-name').value;
+            const price = document.getElementById('p-price').value;
+            const cat = document.getElementById('p-category').value;
+            const stock = document.getElementById('p-stock').value;
+            const file = document.getElementById('p-img').files[0];
+
+            if(!name || !price) return showMessage("⚠️ Datos incompletos");
+            const btn = document.getElementById('publish-btn');
+            btn.innerText = "Sincronizando..."; btn.disabled = true;
+
+            let imgUrl = null;
+            if(file) {
+                const fileName = `${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
+                const { data, error } = await sb.storage.from('productos').upload(fileName, file);
+                if(!error) imgUrl = `${S_URL}/storage/v1/object/public/productos/${fileName}`;
+            }
+
+            const payload = { name, price, category: cat, stock };
+            if(imgUrl) payload.img = imgUrl;
+
+            let res;
+            if(id) res = await sb.from('productos').update(payload).eq('id', id);
+            else res = await sb.from('productos').insert([payload]);
+
+            if(!res.error) { showMessage("✅ Guardado"); resetForm(); loadInventory(); }
+            btn.disabled = false; btn.innerText = "Sincronizar Producto";
+        }
+
+        window.deleteProduct = async (id) => {
+            if(confirm("¿Eliminar producto?")) {
+                const { error } = await sb.from('productos').delete().eq('id', id);
+                if(!error) { showMessage("🗑️ Eliminado"); loadInventory(); }
+            }
+        }
+
+        async function loadOrders() {
+            const { data, error } = await sb.from('pedidos').select('*').order('created_at', { ascending: false });
+            if(error || !data.length) return;
+            let html = `<table><thead><tr><th>Fecha</th><th>Cliente</th><th>Resumen</th><th>Total</th></tr></thead><tbody>`;
+            data.forEach(o => {
+                html += `<tr>
+                    <td style="font-size:11px; color:#555;">${new Date(o.created_at).toLocaleDateString()}</td>
+                    <td><b>${o.cliente_nombre}</b></td>
+                    <td style="font-size:12px; color:#aaa;">${o.detalles_pedido}</td>
+                    <td style="font-weight:900;">$${o.total}</td>
+                </tr>`;
+            });
+            document.getElementById('orders-list').innerHTML = html + `</tbody></table>`;
+        }
+
+        // --- FUNCIÓN EXPORTAR A EXCEL (CSV) ---
+        window.exportToExcel = async () => {
+            const { data, error } = await sb.from('pedidos').select('created_at, cliente_nombre, cliente_email, detalles_pedido, total, estado');
+            if (error || !data.length) return showMessage("❌ No hay datos para exportar");
+
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "Fecha,Cliente,Email,Detalles,Total,Estado\n"; // Cabeceras
+
+            data.forEach(o => {
+                const row = [
+                    new Date(o.created_at).toLocaleDateString(),
+                    `"${o.cliente_nombre}"`,
+                    `"${o.cliente_email}"`,
+                    `"${o.detalles_pedido.replace(/"/g, '""')}"`,
+                    o.total,
+                    o.estado
+                ].join(",");
+                csvContent += row + "\n";
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `Reporte_Ventas_HighClass_${new Date().toLocaleDateString()}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            showMessage("📊 Reporte descargado");
+        }
+
+        function showMessage(msg) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'toast'; toast.innerText = msg;
+            container.appendChild(toast);
+            setTimeout(() => { toast.style.opacity = "0"; setTimeout(() => toast.remove(), 400); }, 3000);
+        }
+
+        window.switchView = (id, el) => {
+            document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById(id).classList.add('active'); el.classList.add('active');
+            if(id === 'inv-view') loadInventory();
+            if(id === 'orders-view') loadOrders();
+        }
+
+        window.resetForm = () => {
+            document.getElementById('p-id').value = '';
+            document.getElementById('p-name').value = '';
+            document.getElementById('p-price').value = '';
+            document.getElementById('form-title').innerText = "Nuevo Artículo";
+            document.getElementById('publish-btn').innerText = "Sincronizar Producto";
+            document.getElementById('cancel-edit').style.display = "none";
+        }
+        
+        window.prepareEdit = (id, name, price, cat, stock) => {
+            document.getElementById('p-id').value = id;
+            document.getElementById('p-name').value = name;
+            document.getElementById('p-price').value = price;
+            document.getElementById('p-category').value = cat;
+            document.getElementById('p-stock').value = stock;
+            document.getElementById('form-title').innerText = "Editando Artículo";
+            document.getElementById('publish-btn').innerText = "Actualizar Cambios";
+            document.getElementById('cancel-edit').style.display = "block";
+            switchView('add-view', document.getElementById('nav-add'));
+        }
+    </script>
+</body>
+</html>
